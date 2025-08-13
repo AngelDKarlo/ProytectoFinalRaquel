@@ -30,9 +30,9 @@ public class MarketDataService {
     public void loadData() {
         System.out.println("Cargando datos históricos del mercado...");
         // Carga los datos para cada criptomoneda que tienes
-        loadCurrencyData("BTC", "/historical_data/BTC_USD_historical.csv");
-        loadCurrencyData("ETH", "/historical_data/ETH_USD_historical.csv");
-        loadCurrencyData("ADA", "/historical_data/ADA_USD_historical.csv");
+        loadCurrencyData("ZOR", "/historical_data/ZOR_USD_historical.csv");
+        loadCurrencyData("NEB", "/historical_data/NEB_USD_historical.csv");
+        loadCurrencyData("LUM", "/historical_data/LUM_USD_historical.csv");
         System.out.println("Datos históricos cargados.");
     }
 

@@ -12,7 +12,7 @@ public class DatabaseConfig {
     private static final Properties properties = new Properties();
 
     static {
-        try (InputStream in = DatabaseConfig.class.getClassLoader().getResourceAsStream("config.preoperties")) {
+        try (InputStream in = DatabaseConfig.class.getClassLoader().getResourceAsStream("application.properties")) {
             if (in != null) {
                 properties.load(in);
             } else {
