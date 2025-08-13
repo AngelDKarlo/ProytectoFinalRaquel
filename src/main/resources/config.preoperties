@@ -1,3 +1,13 @@
-db.url=jdbc:mysql://157.245.164.138:3306/Cripto_db
-db.username=angel
-db.password=ENCISO41459
+# CONFIGURACIÓN DE LA CONEXIÓN A LA BASE DE DATOS (DataSource)
+spring.datasource.url=jdbc:mysql://157.245.164.138:3306/Cripto_bd
+spring.datasource.username=angel
+spring.datasource.password=ENCISO41459
+
+# CONFIGURACIÓN DE HIBERNATE/JPA
+# Le dice a Hibernate que intente actualizar la estructura de la base de datos
+# para que coincida con tus clases @Entity. Muy útil para desarrollo.
+spring.jpa.hibernate.ddl-auto=update
+
+# Muestra en la consola las consultas SQL que se ejecutan.
+# Excelente para depurar.
+spring.jpa.show-sql=true
