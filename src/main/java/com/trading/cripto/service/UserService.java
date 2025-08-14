@@ -1,37 +1,43 @@
 package com.trading.cripto.service;
 
+import com.trading.cripto.model.Portafolio;
 import com.trading.cripto.model.User;
+import com.trading.cripto.repository.PortafolioRepository;
 import com.trading.cripto.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.sql.Date;
 import java.util.Optional;
 
-@Service // 1. Marca esta clase como un "Servicio" de Spring
+@Service
 public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final PortafolioRepository portafolioRepository;
 
-    // 2. Inyección de dependencias por constructor (la mejor práctica)
-    // Spring buscará un Bean de UserRepository y PasswordEncoder y los pasará aquí.
     @Autowired
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository,
+                       PasswordEncoder passwordEncoder,
+                       PortafolioRepository portafolioRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.portafolioRepository = portafolioRepository;
     }
 
-    public User registerUser(String email, String password, String nombre_usuario, String nombre_completo, Date fecha_nac, Date fecha_registro) throws Exception {
+    @Transactional
+    public User registerUser(String email, String password, String nombre_usuario,
+                             String nombre_completo, Date fecha_nac, Date fecha_registro) throws Exception {
 
-        // 3. Usamos el nuevo método del repositorio que devuelve un Optional
         Optional<User> existingUser = userRepository.findByEmail(email);
         if (existingUser.isPresent()) {
             throw new Exception("El email ya existe");
         }
 
-        // El resto de la lógica es muy similar
         String hashedPassword = passwordEncoder.encode(password);
 
         User user = new User();
@@ -42,7 +48,21 @@ public class UserService {
         user.setFechaNacimiento(fecha_nac);
         user.setFechaRegistro(fecha_registro);
 
-        // 4. Usamos el método save() que nos da JpaRepository
-        return userRepository.save(user);
+        // Guardar usuario
+        User savedUser = userRepository.save(user);
+
+        // Crear portafolio automáticamente con $10,000 USD
+        Portafolio portafolio = new Portafolio(savedUser.getId(), new BigDecimal("10000.00"));
+        portafolioRepository.save(portafolio);
+
+        return savedUser;
+    }
+
+    public Optional<User> findByEmail(String email) {
+        return userRepository.findByEmail(email);
+    }
+
+    public Optional<User> findById(Integer id) {
+        return userRepository.findById(id);
     }
 }

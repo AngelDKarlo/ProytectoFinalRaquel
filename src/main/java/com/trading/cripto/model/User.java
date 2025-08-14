@@ -31,6 +31,9 @@ public class User {
     private Date fecha_nacimiento;
 
     // Getters
+    public int getId() {
+        return id;
+    }
     public String getEmail() {
         return email;
     }
@@ -56,6 +59,11 @@ public class User {
     }
 
     // Setters
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
     public void setEmail(String email) {
         this.email = email;
     }

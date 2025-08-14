@@ -2,9 +2,6 @@ package com.trading.cripto.dto;
 
 import java.sql.Date;
 
-// 5. (Clase extra) Crea una clase para representar los datos del registro.
-// Esto es una buena práctica (se llama DTO - Data Transfer Object).
-// Puedes crearla en un nuevo paquete llamado 'dto'.
 public class RegistrationRequest {
     private String email;
     private String password;
