@@ -1,0 +1,94 @@
+version: '3.8'
+
+services:
+  # Base de datos MySQL
+  mysql:
+    image: mysql:8.0
+    container_name: crypto-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-CryptoTrading2024!}
+      MYSQL_DATABASE: Cripto_db
+      MYSQL_USER: crypto_user
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-CryptoPass2024!}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./Cripto_db.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./Cripto_db_updated.sql:/docker-entrypoint-initdb.d/02-updates.sql
+    networks:
+      - crypto-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # Aplicación Spring Boot
+  app:
+    build: .
+    container_name: crypto-backend
+    restart: always
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      # Configuración de base de datos
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/Cripto_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: crypto_user
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-CryptoPass2024!}
+      
+      # Configuración JWT
+      JWT_SECRET: ${JWT_SECRET:-SuperSecretKeyForProductionMinimum512BitsLongForHS512Algorithm2024}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+      
+      # Configuración de servidor
+      SERVER_PORT: 8080
+      SPRING_PROFILES_ACTIVE: production
+      
+      # Configuración de JVM
+      JAVA_OPTS: -Xmx512m -Xms256m
+    ports:
+      - "8080:8080"
+    volumes:
+      - app_logs:/app/logs
+      - app_data:/app/data
+    networks:
+      - crypto-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/market/prices"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Nginx como reverse proxy (opcional pero recomendado)
+  nginx:
+    image: nginx:alpine
+    container_name: crypto-nginx
+    restart: always
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    networks:
+      - crypto-network
+
+networks:
+  crypto-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local
+  app_logs:
+    driver: local
+  app_data:
+    driver: local
+  nginx_logs:
+    driver: local
