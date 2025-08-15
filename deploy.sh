@@ -87,8 +87,8 @@ deploy_files() {
     print_status "Copiando archivos del proyecto..."
     
     # Copiar todos los archivos necesarios
-    cp -r src pom.xml Dockerfile docker-compose.yml docker-entrypoint.sh nginx.conf *.sql $DEPLOY_DIR/
-    
+    cp -r src pom.xml Dockerfile docker-compose.yml docker-entrypoint.sh apache.conf *.sql $DEPLOY_DIR/
+
     # Copiar archivo de entorno si no existe
     if [ ! -f "$DEPLOY_DIR/.env" ]; then
         cp .env.production $DEPLOY_DIR/.env
