@@ -3,17 +3,17 @@ version: '3.8'
 services:
   mysql:
     image: mysql:8.0
-    container_name: crypto-mysql-new
+    container_name: crypto-mysql
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: CryptoTrading2024!
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-CryptoTrading2024!}
       MYSQL_DATABASE: Cripto_db
       MYSQL_USER: crypto_user
-      MYSQL_PASSWORD: CryptoPass2024!
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-CryptoPass2024!}
     ports:
       - "3307:3306"
     volumes:
-      - mysql_data_new:/var/lib/mysql
+      - mysql_data:/var/lib/mysql
       - ./Cripto_db.sql:/docker-entrypoint-initdb.d/01-schema.sql
     networks:
       - crypto-network
@@ -24,7 +24,7 @@ services:
 
   app:
     build: .
-    container_name: crypto-backend-new
+    container_name: crypto-backend
     restart: always
     depends_on:
       mysql:
@@ -32,14 +32,17 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/Cripto_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: crypto_user
-      SPRING_DATASOURCE_PASSWORD: CryptoPass2024!
-      JWT_SECRET: SuperSecretKeyForProductionMinimum512BitsLongForHS512Algorithm2024
-      JWT_EXPIRATION: 86400000
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-CryptoPass2024!}
+      JWT_SECRET: ${JWT_SECRET:-SuperSecretKeyForProductionMinimum512BitsLongForHS512Algorithm2024}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
       SERVER_PORT: 8080
       SPRING_PROFILES_ACTIVE: production
       JAVA_OPTS: -Xmx512m -Xms256m
     ports:
       - "8080:8080"
+    volumes:
+      - app_logs:/app/logs
+      - app_data:/app/data
     networks:
       - crypto-network
     healthcheck:
@@ -49,10 +52,30 @@ services:
       retries: 3
       start_period: 40s
 
+  apache:
+    image: httpd:2.4
+    container_name: crypto-apache
+    restart: always
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+    volumes:
+      - ./apache-working.conf:/usr/local/apache2/conf/httpd.conf:ro
+    networks:
+      - crypto-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
 networks:
   crypto-network:
     driver: bridge
 
 volumes:
-  mysql_data_new:
-    driver: local
+  mysql_data:
+  app_logs:
+  app_data:

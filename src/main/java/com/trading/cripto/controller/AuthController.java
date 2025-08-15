@@ -1,3 +1,4 @@
+// AuthController.java - CON CORS AÑADIDO
 package com.trading.cripto.controller;
 
 import com.trading.cripto.dto.LoginRequest;
@@ -18,7 +19,12 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "*")
+@CrossOrigin(
+    origins = {"*"},
+    allowedHeaders = {"*"},
+    methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS},
+    allowCredentials = "false"
+)
 public class AuthController {
 
     private final UserService userService;
@@ -40,6 +46,7 @@ public class AuthController {
             // Validaciones adicionales
             if (request.getPassword().length() < 6) {
                 return ResponseEntity.badRequest()
+                        .header("Access-Control-Allow-Origin", "*")
                         .body(Map.of("success", false, "message", "La contraseña debe tener al menos 6 caracteres"));
             }
 
@@ -64,12 +71,18 @@ public class AuthController {
             response.put("email", newUser.getEmail());
             response.put("nombreUsuario", newUser.getNombreUsuario());
 
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .header("Access-Control-Allow-Origin", "*")
+                    .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+                    .header("Access-Control-Allow-Headers", "*")
+                    .body(response);
         } catch (Exception e) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("success", false);
             errorResponse.put("message", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .header("Access-Control-Allow-Origin", "*")
+                    .body(errorResponse);
         }
     }
 
@@ -84,6 +97,7 @@ public class AuthController {
 
             if (!authResponse.isSuccess()) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .header("Access-Control-Allow-Origin", "*")
                         .body(Map.of("success", false, "message", authResponse.getMessage()));
             }
 
@@ -99,9 +113,14 @@ public class AuthController {
             response.put("nombreUsuario", user.getNombreUsuario());
             response.put("nombreCompleto", user.getNombreCompleto());
 
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok()
+                    .header("Access-Control-Allow-Origin", "*")
+                    .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+                    .header("Access-Control-Allow-Headers", "*")
+                    .body(response);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .header("Access-Control-Allow-Origin", "*")
                     .body(Map.of("success", false, "message", "Error en la autenticación: " + e.getMessage()));
         }
     }
@@ -116,6 +135,7 @@ public class AuthController {
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .header("Access-Control-Allow-Origin", "*")
                     .body(Map.of("valid", false, "message", "Token no proporcionado"));
         }
 
@@ -126,15 +146,31 @@ public class AuthController {
             Integer userId = authService.getUserIdFromToken(token);
             String email = authService.getEmailFromToken(token);
 
-            return ResponseEntity.ok(Map.of(
-                    "valid", true,
-                    "userId", userId,
-                    "email", email
-            ));
+            return ResponseEntity.ok()
+                    .header("Access-Control-Allow-Origin", "*")
+                    .body(Map.of(
+                            "valid", true,
+                            "userId", userId,
+                            "email", email
+                    ));
         } else {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .header("Access-Control-Allow-Origin", "*")
                     .body(Map.of("valid", false, "message", "Token inválido o expirado"));
         }
+    }
+
+    /**
+     * OPTIONS para preflight CORS
+     */
+    @RequestMapping(method = RequestMethod.OPTIONS, value = "/**")
+    public ResponseEntity<?> handlePreflight() {
+        return ResponseEntity.ok()
+                .header("Access-Control-Allow-Origin", "*")
+                .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+                .header("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Requested-With")
+                .header("Access-Control-Max-Age", "3600")
+                .build();
     }
 
     /**
@@ -143,11 +179,12 @@ public class AuthController {
      */
     @PostMapping("/logout")
     public ResponseEntity<?> logout() {
-        // En JWT, el logout se maneja del lado del cliente eliminando el token
-        return ResponseEntity.ok(Map.of(
-                "success", true,
-                "message", "Logout exitoso. Por favor elimina el token del cliente."
-        ));
+        return ResponseEntity.ok()
+                .header("Access-Control-Allow-Origin", "*")
+                .body(Map.of(
+                        "success", true,
+                        "message", "Logout exitoso. Por favor elimina el token del cliente."
+                ));
     }
 
     /**
@@ -162,6 +199,7 @@ public class AuthController {
 
             if (userId == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .header("Access-Control-Allow-Origin", "*")
                         .body(Map.of("success", false, "message", "Usuario no autenticado"));
             }
 
@@ -176,9 +214,12 @@ public class AuthController {
             profile.put("fechaRegistro", user.getFechaRegistro());
             profile.put("fechaNacimiento", user.getFechaNacimiento());
 
-            return ResponseEntity.ok(profile);
+            return ResponseEntity.ok()
+                    .header("Access-Control-Allow-Origin", "*")
+                    .body(profile);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .header("Access-Control-Allow-Origin", "*")
                     .body(Map.of("success", false, "message", e.getMessage()));
         }
     }

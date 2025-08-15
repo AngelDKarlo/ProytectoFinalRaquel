@@ -1,3 +1,4 @@
+// SecurityConfig.java - CORREGIDO para CORS
 package com.trading.cripto.config;
 
 import com.trading.cripto.security.JwtAuthenticationFilter;
@@ -16,6 +17,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -38,14 +40,28 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(authz -> authz
-                        // Endpoints públicos
+                        // Endpoints públicos - SIN autenticación
                         .requestMatchers("/api/auth/register").permitAll()
                         .requestMatchers("/api/auth/login").permitAll()
                         .requestMatchers("/api/market/prices").permitAll()
                         .requestMatchers("/api/market/price/**").permitAll()
                         .requestMatchers("/api/market/history/**").permitAll()
+                        .requestMatchers("/api/market/stats/**").permitAll()
+                        .requestMatchers("/api/market/summary").permitAll()
+                        .requestMatchers("/api/market/recent/**").permitAll()
+                        
+                        // Debug endpoints - públicos para testing
+                        .requestMatchers("/api/debug/connection").permitAll()
+                        .requestMatchers("/api/debug/stats").permitAll()
+                        .requestMatchers("/api/debug/test-db").permitAll()
+                        .requestMatchers("/api/debug/update-prices").permitAll()
+                        
                         // Health check
                         .requestMatchers("/actuator/health").permitAll()
+                        
+                        // OPTIONS requests para CORS
+                        .requestMatchers("OPTIONS", "/**").permitAll()
+                        
                         // Todos los demás endpoints requieren autenticación
                         .anyRequest().authenticated()
                 )
@@ -57,10 +73,38 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000", "http://localhost:4200"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        
+        // PERMITIR TODOS LOS ORÍGENES para desarrollo
+        configuration.setAllowedOriginPatterns(Arrays.asList("*"));
+        
+        // Orígenes específicos adicionales
+        configuration.setAllowedOrigins(Arrays.asList(
+            "http://localhost:3000",
+            "http://localhost:4200", 
+            "http://localhost:8080",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:8080",
+            "null" // Para archivos locales HTML
+        ));
+        
+        // Métodos HTTP permitidos
+        configuration.setAllowedMethods(Arrays.asList(
+            "GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"
+        ));
+        
+        // Headers permitidos
         configuration.setAllowedHeaders(Arrays.asList("*"));
+        
+        // Permitir credentials
         configuration.setAllowCredentials(true);
+        
+        // Headers expuestos
+        configuration.setExposedHeaders(Arrays.asList(
+            "Authorization", "Cache-Control", "Content-Type"
+        ));
+        
+        // Max age para preflight requests
+        configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
