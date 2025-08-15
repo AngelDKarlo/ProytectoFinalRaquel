@@ -16,7 +16,6 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
       - ./Cripto_db.sql:/docker-entrypoint-initdb.d/01-schema.sql
-      - ./Cripto_db_updated.sql:/docker-entrypoint-initdb.d/02-updates.sql
     networks:
       - crypto-network
     healthcheck:
@@ -37,15 +36,15 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/Cripto_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: crypto_user
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-CryptoPass2024!}
-      
+
       # Configuración JWT
       JWT_SECRET: ${JWT_SECRET:-SuperSecretKeyForProductionMinimum512BitsLongForHS512Algorithm2024}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
-      
+
       # Configuración de servidor
       SERVER_PORT: 8080
       SPRING_PROFILES_ACTIVE: production
-      
+
       # Configuración de JVM
       JAVA_OPTS: -Xmx512m -Xms256m
     ports:
@@ -62,9 +61,9 @@ services:
       retries: 3
       start_period: 40s
 
-# Apache como reverse proxy
+  # Apache como reverse proxy
   apache:
-    image: httpd:2.4          # Imagen oficial de Apache
+    image: httpd:2.4
     container_name: crypto-apache
     restart: always
     depends_on:
@@ -73,7 +72,7 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./apache.conf:/usr/local/apache2/conf/httpd.conf:ro # <-- Referencia al nuevo archivo
+      - ./apache.conf:/usr/local/apache2/conf/httpd.conf:ro
       - ./ssl:/usr/local/apache2/conf/ssl:ro
       - apache_logs:/usr/local/apache2/logs
     networks:
@@ -90,5 +89,5 @@ volumes:
     driver: local
   app_data:
     driver: local
-  nginx_logs:
+  apache_logs:
     driver: local

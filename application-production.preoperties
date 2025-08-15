@@ -1,97 +1,47 @@
-# application-production.properties
-# Configuración específica para producción
+# ===============================================
+# CONFIGURACIÓN DE PRODUCCIÓN
+# ===============================================
 
-# ===============================================
-# Configuración del Servidor
-# ===============================================
 server.port=${SERVER_PORT:8080}
 server.compression.enabled=true
-server.compression.mime-types=application/json,application/xml,text/html,text/xml,text/plain
 
-# ===============================================
-# Base de Datos - Usa variables de entorno
-# ===============================================
+# Base de Datos
 spring.datasource.url=${SPRING_DATASOURCE_URL}
 spring.datasource.username=${SPRING_DATASOURCE_USERNAME}
 spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}
 
-# Pool de conexiones optimizado para producción
+# Pool de conexiones optimizado
 spring.datasource.hikari.maximum-pool-size=20
 spring.datasource.hikari.minimum-idle=5
 spring.datasource.hikari.connection-timeout=30000
-spring.datasource.hikari.idle-timeout=600000
-spring.datasource.hikari.max-lifetime=1800000
 
-# ===============================================
-# JPA/Hibernate - Optimizado para producción
-# ===============================================
+# JPA/Hibernate
 spring.jpa.hibernate.ddl-auto=validate
 spring.jpa.show-sql=false
 spring.jpa.properties.hibernate.format_sql=false
-spring.jpa.properties.hibernate.generate_statistics=false
-spring.jpa.properties.hibernate.jdbc.batch_size=20
-spring.jpa.properties.hibernate.order_inserts=true
-spring.jpa.properties.hibernate.order_updates=true
 
-# Cache de segundo nivel
-spring.jpa.properties.hibernate.cache.use_second_level_cache=true
-spring.jpa.properties.hibernate.cache.use_query_cache=true
-spring.jpa.properties.hibernate.cache.region.factory_class=org.hibernate.cache.jcache.JCacheRegionFactory
-
-# ===============================================
-# JWT - Usa variables de entorno
-# ===============================================
+# JWT
 jwt.secret=${JWT_SECRET}
 jwt.expiration=${JWT_EXPIRATION:86400000}
 
-# ===============================================
-# Logging - Reducido para producción
-# ===============================================
+# Logging reducido para producción
 logging.level.root=WARN
 logging.level.com.trading.cripto=INFO
-logging.level.org.springframework.web=WARN
-logging.level.org.springframework.security=WARN
-logging.level.org.hibernate=WARN
-
-# Archivo de log con rotación
 logging.file.name=/app/logs/application.log
 logging.file.max-size=100MB
-logging.file.max-history=30
-logging.pattern.console=%d{yyyy-MM-dd HH:mm:ss} - %msg%n
-logging.pattern.file=%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n
 
-# ===============================================
-# Actuator - Limitado para producción
-# ===============================================
-management.endpoints.web.exposure.include=health,info,metrics
+# Actuator limitado
+management.endpoints.web.exposure.include=health,info
 management.endpoint.health.show-details=when-authorized
-management.metrics.export.prometheus.enabled=true
 
-# ===============================================
 # Seguridad
-# ===============================================
 server.error.include-message=never
 server.error.include-stacktrace=never
-server.error.include-binding-errors=never
 
-# ===============================================
-# CORS - Configuración estricta
-# ===============================================
-cors.allowed-origins=${CORS_ALLOWED_ORIGINS:https://app.example.com}
-cors.allowed-methods=GET,POST,PUT,DELETE,OPTIONS
-cors.allowed-headers=*
-cors.allow-credentials=true
-cors.max-age=3600
-
-# ===============================================
-# Trading Configuration
-# ===============================================
+# Trading config
 trading.commission.percentage=${TRADING_COMMISSION:0.001}
 trading.initial.balance=${TRADING_INITIAL_BALANCE:10000}
-trading.max.transactions.per.day=1000
 
-# ===============================================
-# Market Configuration
-# ===============================================
+# Market config
 market.update.interval=${MARKET_UPDATE_INTERVAL:5000}
-market.history.retention.days=${MARKET_HISTORY_RETENTION_DAYS:30}
+market.history.retention.days=30
