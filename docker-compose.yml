@@ -12,7 +12,7 @@ services:
       MYSQL_USER: crypto_user
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-CryptoPass2024!}
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./Cripto_db.sql:/docker-entrypoint-initdb.d/01-schema.sql
@@ -69,7 +69,7 @@ services:
     depends_on:
       - app
     ports:
-      - "80:80"
+      - "8081:80"
       - "443:443"
     volumes:
       - ./apache.conf:/usr/local/apache2/conf/httpd.conf:ro
