@@ -16,7 +16,6 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
-import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -33,13 +32,13 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // CORS PRIMERO - MUY IMPORTANTE
+                // CORS PRIMERO
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 
                 // Deshabilitar CSRF
                 .csrf(csrf -> csrf.disable())
                 
-                // Sin sesiones
+                // Sin sesiones - usar JWT
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
@@ -58,11 +57,15 @@ public class SecurityConfig {
                         // OPTIONS requests para CORS preflight
                         .requestMatchers("OPTIONS", "/**").permitAll()
                         
-                        // Todos los demás requieren autenticación
+                        // ✅ ENDPOINTS QUE REQUIEREN AUTENTICACIÓN JWT
+                        .requestMatchers("/api/trading/**").authenticated()
+                        .requestMatchers("/api/portafolio/**").authenticated()
+                        
+                        // Todos los demás por defecto requieren autenticación
                         .anyRequest().authenticated()
                 )
                 
-                // Agregar filtro JWT DESPUÉS de configurar CORS
+                // Agregar filtro JWT
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -72,31 +75,28 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         
-        // PERMITIR TODOS LOS ORÍGENES
+        // PERMITIR TODOS LOS ORÍGENES para desarrollo local
         configuration.setAllowedOriginPatterns(Arrays.asList("*"));
         configuration.addAllowedOrigin("*");
         configuration.addAllowedOrigin("file://");
-        configuration.addAllowedOrigin("null"); // Para archivos locales
+        configuration.addAllowedOrigin("null"); // Para archivos HTML locales
         
         // Métodos HTTP permitidos
         configuration.setAllowedMethods(Arrays.asList(
             "GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"
         ));
         
-        // Headers permitidos
-        configuration.setAllowedHeaders(Arrays.asList("*"));
+        // Headers permitidos - INCLUIR Authorization para JWT
+        configuration.setAllowedHeaders(Arrays.asList(
+            "*", "Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin"
+        ));
         
         // Headers expuestos
         configuration.setExposedHeaders(Arrays.asList(
-            "Authorization", 
-            "Cache-Control", 
-            "Content-Type", 
-            "Access-Control-Allow-Origin",
-            "Access-Control-Allow-Methods",
-            "Access-Control-Allow-Headers"
+            "Authorization", "Content-Type", "X-Total-Count"
         ));
         
-        // CREDENTIALS FALSE para evitar conflictos
+        // CREDENTIALS FALSE para evitar conflictos con *
         configuration.setAllowCredentials(false);
         
         // Max age para preflight requests

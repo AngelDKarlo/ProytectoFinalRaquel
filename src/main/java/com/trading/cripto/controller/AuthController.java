@@ -4,6 +4,7 @@ import com.trading.cripto.model.User;
 import com.trading.cripto.model.Portafolio;
 import com.trading.cripto.repository.UserRepository;
 import com.trading.cripto.repository.PortafolioRepository;
+import com.trading.cripto.security.Authentication;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -14,7 +15,6 @@ import java.sql.Date;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -30,47 +30,44 @@ public class AuthController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private Authentication authenticationService;
+
     /**
-     * Registro de usuario - FUNCIONARÁ como DebugController
+     * Registro de usuario con JWT real
      */
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@RequestBody Map<String, Object> requestData) {
         try {
-            System.out.println("📝 [AuthController] Registro recibido");
-            System.out.println("📋 Datos: " + requestData);
+            System.out.println("📝 [AuthController] Registro recibido: " + requestData);
 
-            // Extraer datos del request
             String email = (String) requestData.get("email");
             String password = (String) requestData.get("password");
             String nombreUsuario = (String) requestData.get("nombreUsuario");
             String nombreCompleto = (String) requestData.get("nombreCompleto");
             String fechaNacimiento = (String) requestData.get("fechaNacimiento");
 
-            // Validaciones básicas
+            // Validaciones
             if (email == null || password == null || nombreUsuario == null) {
-                Map<String, Object> error = new HashMap<>();
-                error.put("success", false);
-                error.put("message", "Faltan campos requeridos");
-                return ResponseEntity.badRequest().body(error);
+                return ResponseEntity.badRequest().body(
+                    Map.of("success", false, "message", "Faltan campos requeridos")
+                );
             }
 
             if (password.length() < 6) {
-                Map<String, Object> error = new HashMap<>();
-                error.put("success", false);
-                error.put("message", "La contraseña debe tener al menos 6 caracteres");
-                return ResponseEntity.badRequest().body(error);
+                return ResponseEntity.badRequest().body(
+                    Map.of("success", false, "message", "La contraseña debe tener al menos 6 caracteres")
+                );
             }
 
-            // Verificar si el usuario ya existe
-            Optional<User> existingUser = userRepository.findByEmail(email);
-            if (existingUser.isPresent()) {
-                Map<String, Object> error = new HashMap<>();
-                error.put("success", false);
-                error.put("message", "El email ya está registrado");
-                return ResponseEntity.badRequest().body(error);
+            // Verificar si el email ya existe
+            if (userRepository.findByEmail(email).isPresent()) {
+                return ResponseEntity.badRequest().body(
+                    Map.of("success", false, "message", "El email ya está registrado")
+                );
             }
 
-            // Crear usuario nuevo
+            // Crear nuevo usuario
             User newUser = new User();
             newUser.setEmail(email);
             newUser.setPassword(passwordEncoder.encode(password));
@@ -78,7 +75,7 @@ public class AuthController {
             newUser.setNombreCompleto(nombreCompleto != null ? nombreCompleto : nombreUsuario);
             newUser.setFechaRegistro(Date.valueOf(LocalDate.now()));
             
-            if (fechaNacimiento != null) {
+            if (fechaNacimiento != null && !fechaNacimiento.isEmpty()) {
                 newUser.setFechaNacimiento(Date.valueOf(fechaNacimiento));
             } else {
                 newUser.setFechaNacimiento(Date.valueOf("1990-01-01"));
@@ -88,134 +85,141 @@ public class AuthController {
             User savedUser = userRepository.save(newUser);
             System.out.println("✅ Usuario guardado con ID: " + savedUser.getId());
 
-            // Crear portafolio con $10,000 USD
+            // Crear portafolio inicial con $10,000 USD
             Portafolio portafolio = new Portafolio(savedUser.getId(), new BigDecimal("10000.00"));
             portafolioRepository.save(portafolio);
             System.out.println("✅ Portafolio creado con $10,000 USD");
 
-            // Respuesta exitosa
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Usuario registrado exitosamente");
-            response.put("userId", savedUser.getId());
-            response.put("email", savedUser.getEmail());
-            response.put("nombreUsuario", savedUser.getNombreUsuario());
-            response.put("token", "temp_token_" + savedUser.getId()); // Token simple por ahora
-            response.put("timestamp", System.currentTimeMillis());
+            // Generar token JWT real automáticamente
+            Authentication.AuthResponse authResponse = authenticationService.authenticate(email, password);
 
-            return ResponseEntity.ok(response);
+            if (authResponse.isSuccess()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", true);
+                response.put("message", "Usuario registrado exitosamente");
+                response.put("userId", savedUser.getId());
+                response.put("email", savedUser.getEmail());
+                response.put("nombreUsuario", savedUser.getNombreUsuario());
+                response.put("token", authResponse.getToken()); // Token JWT real
+                response.put("timestamp", System.currentTimeMillis());
+
+                System.out.println("✅ Registro exitoso con token JWT para: " + email);
+                return ResponseEntity.ok(response);
+            } else {
+                System.err.println("❌ Error generando token para usuario recién registrado");
+                return ResponseEntity.status(500).body(
+                    Map.of("success", false, "message", "Usuario creado pero error generando token")
+                );
+            }
 
         } catch (Exception e) {
-            System.err.println("❌ [AuthController] Error en registro: " + e.getMessage());
+            System.err.println("❌ Error en registro: " + e.getMessage());
             e.printStackTrace();
-            
-            Map<String, Object> error = new HashMap<>();
-            error.put("success", false);
-            error.put("message", "Error interno: " + e.getMessage());
-            return ResponseEntity.status(500).body(error);
+            return ResponseEntity.status(500).body(
+                Map.of("success", false, "message", "Error interno: " + e.getMessage())
+            );
         }
     }
 
     /**
-     * Login de usuario - FUNCIONARÁ como DebugController
+     * Login de usuario con JWT real
      */
     @PostMapping("/login")
     public ResponseEntity<?> loginUser(@RequestBody Map<String, Object> requestData) {
         try {
-            System.out.println("🔐 [AuthController] Login recibido");
-            System.out.println("📋 Datos: " + requestData);
+            System.out.println("🔐 [AuthController] Login recibido: " + requestData);
 
             String email = (String) requestData.get("email");
             String password = (String) requestData.get("password");
 
             if (email == null || password == null) {
-                Map<String, Object> error = new HashMap<>();
-                error.put("success", false);
-                error.put("message", "Email y contraseña requeridos");
-                return ResponseEntity.badRequest().body(error);
+                return ResponseEntity.badRequest().body(
+                    Map.of("success", false, "message", "Email y contraseña requeridos")
+                );
             }
 
-            // Buscar usuario
-            Optional<User> userOpt = userRepository.findByEmail(email);
-            if (userOpt.isEmpty()) {
-                Map<String, Object> error = new HashMap<>();
-                error.put("success", false);
-                error.put("message", "Usuario no encontrado");
-                return ResponseEntity.status(401).body(error);
+            // Usar el servicio de autenticación real
+            Authentication.AuthResponse authResponse = authenticationService.authenticate(email, password);
+
+            if (authResponse.isSuccess()) {
+                // Obtener datos del usuario para la respuesta
+                User user = userRepository.findByEmail(email).get();
+                
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", true);
+                response.put("message", "Login exitoso");
+                response.put("userId", authResponse.getUserId());
+                response.put("email", user.getEmail());
+                response.put("nombreUsuario", user.getNombreUsuario());
+                response.put("nombreCompleto", user.getNombreCompleto());
+                response.put("token", authResponse.getToken()); // JWT REAL
+                response.put("timestamp", System.currentTimeMillis());
+
+                System.out.println("✅ Login exitoso para: " + email + " con JWT");
+                return ResponseEntity.ok(response);
+            } else {
+                System.out.println("❌ Login fallido para: " + email + " - " + authResponse.getMessage());
+                return ResponseEntity.status(401).body(
+                    Map.of("success", false, "message", authResponse.getMessage())
+                );
             }
-
-            User user = userOpt.get();
-
-            // Verificar contraseña
-            if (!passwordEncoder.matches(password, user.getPassword())) {
-                Map<String, Object> error = new HashMap<>();
-                error.put("success", false);
-                error.put("message", "Contraseña incorrecta");
-                return ResponseEntity.status(401).body(error);
-            }
-
-            // Login exitoso
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Login exitoso");
-            response.put("userId", user.getId());
-            response.put("email", user.getEmail());
-            response.put("nombreUsuario", user.getNombreUsuario());
-            response.put("nombreCompleto", user.getNombreCompleto());
-            response.put("token", "temp_token_" + user.getId()); // Token simple
-            response.put("timestamp", System.currentTimeMillis());
-
-            System.out.println("✅ Login exitoso para: " + email);
-            return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            System.err.println("❌ [AuthController] Error en login: " + e.getMessage());
+            System.err.println("❌ Error en login: " + e.getMessage());
             e.printStackTrace();
-            
-            Map<String, Object> error = new HashMap<>();
-            error.put("success", false);
-            error.put("message", "Error interno: " + e.getMessage());
-            return ResponseEntity.status(500).body(error);
+            return ResponseEntity.status(500).body(
+                Map.of("success", false, "message", "Error interno: " + e.getMessage())
+            );
         }
     }
 
     /**
-     * Test endpoint para verificar que funciona
+     * Verificar token JWT (útil para el frontend)
+     */
+    @PostMapping("/verify")
+    public ResponseEntity<?> verifyToken(@RequestHeader("Authorization") String authHeader) {
+        try {
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(401).body(
+                    Map.of("success", false, "message", "Token no proporcionado")
+                );
+            }
+
+            String token = authHeader.substring(7);
+            boolean isValid = authenticationService.validateToken(token);
+
+            if (isValid) {
+                Integer userId = authenticationService.getUserIdFromToken(token);
+                String email = authenticationService.getEmailFromToken(token);
+                
+                return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Token válido",
+                    "userId", userId,
+                    "email", email
+                ));
+            } else {
+                return ResponseEntity.status(401).body(
+                    Map.of("success", false, "message", "Token inválido")
+                );
+            }
+
+        } catch (Exception e) {
+            return ResponseEntity.status(401).body(
+                Map.of("success", false, "message", "Error validando token")
+            );
+        }
+    }
+
+    /**
+     * Test endpoint
      */
     @GetMapping("/test")
     public ResponseEntity<?> test() {
-        System.out.println("🧪 [AuthController] Test endpoint");
-        
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
-        response.put("message", "AuthController funcionando correctamente");
+        response.put("message", "AuthController funcionando con JWT real");
         response.put("timestamp", System.currentTimeMillis());
-        
         return ResponseEntity.ok(response);
-    }
-
-    /**
-     * Ver usuarios registrados (para debug)
-     */
-    @GetMapping("/users")
-    public ResponseEntity<?> getUsers() {
-        try {
-            System.out.println("👥 [AuthController] Listando usuarios");
-            
-            long userCount = userRepository.count();
-            
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("user_count", userCount);
-            response.put("message", "Total de usuarios registrados: " + userCount);
-            response.put("timestamp", System.currentTimeMillis());
-            
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("success", false);
-            error.put("error", e.getMessage());
-            return ResponseEntity.status(500).body(error);
-        }
     }
 }
