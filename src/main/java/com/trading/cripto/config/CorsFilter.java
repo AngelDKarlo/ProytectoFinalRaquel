@@ -20,7 +20,6 @@ public class CorsFilter implements Filter {
         HttpServletResponse response = (HttpServletResponse) res;
         HttpServletRequest request = (HttpServletRequest) req;
 
-        // Headers CORS para TODAS las respuestas
         response.setHeader("Access-Control-Allow-Origin", "*");
         response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
         response.setHeader("Access-Control-Allow-Headers", 
@@ -28,23 +27,25 @@ public class CorsFilter implements Filter {
         response.setHeader("Access-Control-Allow-Credentials", "false");
         response.setHeader("Access-Control-Max-Age", "3600");
 
-        // Log para debug
-        System.out.println("🔄 [CORS Filter] " + request.getMethod() + " " + request.getRequestURI());
+        String uri = request.getRequestURI();
+        String method = request.getMethod();
         
-        // Para requests OPTIONS (preflight), responder inmediatamente
-        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
-            System.out.println("✅ [CORS Filter] OPTIONS request - respondiendo con 200");
+        if (uri.contains("/market/prices")) {
+            System.out.println("🔄 [CORS Filter] MARKET/PRICES: " + method + " " + uri);
+        }
+        
+        if ("OPTIONS".equalsIgnoreCase(method)) {
+            System.out.println("✅ [CORS Filter] OPTIONS request para " + uri + " - respondiendo con 200");
             response.setStatus(HttpServletResponse.SC_OK);
             return;
         }
 
-        // Continuar con la cadena de filtros para otros métodos
         chain.doFilter(req, res);
     }
 
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
-        System.out.println("🚀 [CORS Filter] Inicializado - CORS habilitado para todos los endpoints");
+        System.out.println("🚀 [CORS Filter] Inicializado - CORS habilitado");
     }
 
     @Override
@@ -52,4 +53,3 @@ public class CorsFilter implements Filter {
         System.out.println("🛑 [CORS Filter] Destruido");
     }
 }
-

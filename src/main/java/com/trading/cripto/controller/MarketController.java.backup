@@ -1,0 +1,125 @@
+package com.trading.cripto.controller;
+
+import com.trading.cripto.model.Cryptocurrency;
+import com.trading.cripto.model.PriceHistory;
+import com.trading.cripto.repository.CryptocurrencyRepository;
+import com.trading.cripto.service.MarketDataService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+@RestController
+@RequestMapping("/api/market")
+@CrossOrigin(
+    origins = "*", 
+    allowedHeaders = "*",
+    methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS},
+    allowCredentials = "false"
+)
+public class MarketController {
+
+    @Autowired
+    private CryptocurrencyRepository cryptoRepo;
+
+    @Autowired
+    private MarketDataService marketDataService;
+
+    /**
+     * Obtener todas las criptomonedas y sus precios actuales
+     * GET /api/market/prices - CORREGIDO PARA CORS
+     */
+    @GetMapping("/prices")
+    public ResponseEntity<List<Cryptocurrency>> obtenerPrecios() {
+        try {
+            System.out.println("🔍 [MarketController] Solicitud recibida en /api/market/prices");
+            
+            List<Cryptocurrency> cryptos = cryptoRepo.findAll();
+            System.out.println("📊 [MarketController] Criptomonedas encontradas: " + cryptos.size());
+            
+            return ResponseEntity.ok()
+                    .header("Access-Control-Allow-Origin", "*")
+                    .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+                    .header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+                    .header("Access-Control-Allow-Credentials", "false")
+                    .body(cryptos);
+        } catch (Exception e) {
+            System.err.println("❌ [MarketController] Error en /market/prices: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError()
+                    .header("Access-Control-Allow-Origin", "*")
+                    .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+                    .header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+                    .build();
+        }
+    }
+
+    /**
+     * CRÍTICO: OPTIONS para preflight CORS
+     */
+    @RequestMapping(method = RequestMethod.OPTIONS, value = "/prices")
+    public ResponseEntity<?> handlePreflightPrices() {
+        System.out.println("🔄 [MarketController] OPTIONS request recibido para /prices");
+        return ResponseEntity.ok()
+                .header("Access-Control-Allow-Origin", "*")
+                .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+                .header("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Requested-With, Accept, Origin")
+                .header("Access-Control-Allow-Credentials", "false")
+                .header("Access-Control-Max-Age", "3600")
+                .build();
+    }
+
+    @RequestMapping(method = RequestMethod.OPTIONS, value = "/**")
+    public ResponseEntity<?> handlePreflightGeneral() {
+        System.out.println("🔄 [MarketController] OPTIONS request recibido para endpoint general");
+        return ResponseEntity.ok()
+                .header("Access-Control-Allow-Origin", "*")
+                .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+                .header("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Requested-With, Accept, Origin")
+                .header("Access-Control-Allow-Credentials", "false")
+                .header("Access-Control-Max-Age", "3600")
+                .build();
+    }
+
+    @GetMapping("/price/{symbol}")
+    public ResponseEntity<Cryptocurrency> obtenerPrecio(@PathVariable String symbol) {
+        try {
+            System.out.println("🔍 [MarketController] Solicitud para precio de: " + symbol);
+            Optional<Cryptocurrency> crypto = cryptoRepo.findBySimbolo(symbol.toUpperCase());
+            if (crypto.isPresent()) {
+                return ResponseEntity.ok()
+                        .header("Access-Control-Allow-Origin", "*")
+                        .header("Access-Control-Allow-Methods", "GET, OPTIONS")
+                        .header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+                        .body(crypto.get());
+            } else {
+                return ResponseEntity.notFound()
+                        .header("Access-Control-Allow-Origin", "*")
+                        .build();
+            }
+        } catch (Exception e) {
+            System.err.println("❌ [MarketController] Error en /market/price/" + symbol + ": " + e.getMessage());
+            return ResponseEntity.internalServerError()
+                    .header("Access-Control-Allow-Origin", "*")
+                    .build();
+        }
+    }
+
+    @GetMapping("/test")
+    public ResponseEntity<?> test() {
+        System.out.println("🧪 [MarketController] Test endpoint accedido");
+        return ResponseEntity.ok()
+                .header("Access-Control-Allow-Origin", "*")
+                .header("Access-Control-Allow-Methods", "GET, OPTIONS")
+                .header("Access-Control-Allow-Headers", "Content-Type")
+                .body(Map.of(
+                    "status", "OK",
+                    "message", "MarketController funcionando",
+                    "timestamp", System.currentTimeMillis()
+                ));
+    }
+}
