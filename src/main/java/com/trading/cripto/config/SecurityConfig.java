@@ -1,4 +1,3 @@
-// SecurityConfig.java - CORS COMPLETAMENTE CORREGIDO
 package com.trading.cripto.config;
 
 import com.trading.cripto.security.JwtAuthenticationFilter;
@@ -34,31 +33,36 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+                // CORS PRIMERO - MUY IMPORTANTE
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                
+                // Deshabilitar CSRF
                 .csrf(csrf -> csrf.disable())
+                
+                // Sin sesiones
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
+                
+                // Configuración de autorización
                 .authorizeHttpRequests(authz -> authz
-                        // Endpoints públicos - SIN autenticación
-                        .requestMatchers("/api/auth/register").permitAll()
-                        .requestMatchers("/api/auth/login").permitAll()
-                        
-                        // MARKET endpoints - PÚBLICOS (este era el problema)
-                        .requestMatchers("/api/market/**").permitAll()
-                        
-                        // Debug endpoints - públicos para testing
+                        // ENDPOINTS PÚBLICOS - SIN autenticación
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/market/**").permitAll() 
                         .requestMatchers("/api/debug/**").permitAll()
                         
-                        // Health check
-                        .requestMatchers("/actuator/health").permitAll()
+                        // Health check y actuator
+                        .requestMatchers("/actuator/**").permitAll()
+                        .requestMatchers("/health").permitAll()
                         
-                        // OPTIONS requests para CORS
+                        // OPTIONS requests para CORS preflight
                         .requestMatchers("OPTIONS", "/**").permitAll()
                         
-                        // Todos los demás endpoints requieren autenticación
+                        // Todos los demás requieren autenticación
                         .anyRequest().authenticated()
                 )
+                
+                // Agregar filtro JWT DESPUÉS de configurar CORS
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -70,29 +74,36 @@ public class SecurityConfig {
         
         // PERMITIR TODOS LOS ORÍGENES
         configuration.setAllowedOriginPatterns(Arrays.asList("*"));
-        configuration.setAllowedOrigins(Arrays.asList("*"));
+        configuration.addAllowedOrigin("*");
         
         // Métodos HTTP permitidos
         configuration.setAllowedMethods(Arrays.asList(
             "GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"
         ));
         
-        // Headers permitidos
+        // Headers permitidos - MUY AMPLIO
         configuration.setAllowedHeaders(Arrays.asList("*"));
+        
+        // Headers expuestos
+        configuration.setExposedHeaders(Arrays.asList(
+            "Authorization", 
+            "Cache-Control", 
+            "Content-Type", 
+            "Access-Control-Allow-Origin",
+            "Access-Control-Allow-Methods",
+            "Access-Control-Allow-Headers"
+        ));
         
         // CREDENTIALS FALSE para evitar conflictos
         configuration.setAllowCredentials(false);
         
-        // Headers expuestos
-        configuration.setExposedHeaders(Arrays.asList(
-            "Authorization", "Cache-Control", "Content-Type", "Access-Control-Allow-Origin"
-        ));
-        
         // Max age para preflight requests
         configuration.setMaxAge(3600L);
 
+        // Aplicar a TODAS las rutas
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
+        
         return source;
     }
 }
