@@ -3,7 +3,7 @@ version: '3.8'
 services:
   mysql:
     image: mysql:8.0
-    container_name: crypto-mysql-clean
+    container_name: crypto-mysql-new
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: CryptoTrading2024!
@@ -13,7 +13,7 @@ services:
     ports:
       - "3307:3306"
     volumes:
-      - mysql_data_clean:/var/lib/mysql
+      - mysql_data_new:/var/lib/mysql
       - ./Cripto_db.sql:/docker-entrypoint-initdb.d/01-schema.sql
     networks:
       - crypto-network
@@ -24,7 +24,7 @@ services:
 
   app:
     build: .
-    container_name: crypto-backend-clean
+    container_name: crypto-backend-new
     restart: always
     depends_on:
       mysql:
@@ -54,5 +54,5 @@ networks:
     driver: bridge
 
 volumes:
-  mysql_data_clean:
+  mysql_data_new:
     driver: local

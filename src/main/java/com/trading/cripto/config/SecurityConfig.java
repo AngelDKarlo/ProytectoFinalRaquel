@@ -1,4 +1,4 @@
-// SecurityConfig.java - CORREGIDO para CORS
+// SecurityConfig.java - CORS COMPLETAMENTE CORREGIDO
 package com.trading.cripto.config;
 
 import com.trading.cripto.security.JwtAuthenticationFilter;
@@ -43,18 +43,12 @@ public class SecurityConfig {
                         // Endpoints públicos - SIN autenticación
                         .requestMatchers("/api/auth/register").permitAll()
                         .requestMatchers("/api/auth/login").permitAll()
-                        .requestMatchers("/api/market/prices").permitAll()
-                        .requestMatchers("/api/market/price/**").permitAll()
-                        .requestMatchers("/api/market/history/**").permitAll()
-                        .requestMatchers("/api/market/stats/**").permitAll()
-                        .requestMatchers("/api/market/summary").permitAll()
-                        .requestMatchers("/api/market/recent/**").permitAll()
+                        
+                        // MARKET endpoints - PÚBLICOS (este era el problema)
+                        .requestMatchers("/api/market/**").permitAll()
                         
                         // Debug endpoints - públicos para testing
-                        .requestMatchers("/api/debug/connection").permitAll()
-                        .requestMatchers("/api/debug/stats").permitAll()
-                        .requestMatchers("/api/debug/test-db").permitAll()
-                        .requestMatchers("/api/debug/update-prices").permitAll()
+                        .requestMatchers("/api/debug/**").permitAll()
                         
                         // Health check
                         .requestMatchers("/actuator/health").permitAll()
@@ -74,18 +68,9 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         
-        // PERMITIR TODOS LOS ORÍGENES para desarrollo
+        // PERMITIR TODOS LOS ORÍGENES
         configuration.setAllowedOriginPatterns(Arrays.asList("*"));
-        
-        // Orígenes específicos adicionales
-        configuration.setAllowedOrigins(Arrays.asList(
-            "http://localhost:3000",
-            "http://localhost:4200", 
-            "http://localhost:8080",
-            "http://127.0.0.1:3000",
-            "http://127.0.0.1:8080",
-            "null" // Para archivos locales HTML
-        ));
+        configuration.setAllowedOrigins(Arrays.asList("*"));
         
         // Métodos HTTP permitidos
         configuration.setAllowedMethods(Arrays.asList(
@@ -95,12 +80,12 @@ public class SecurityConfig {
         // Headers permitidos
         configuration.setAllowedHeaders(Arrays.asList("*"));
         
-        // Permitir credentials
-        configuration.setAllowCredentials(true);
+        // CREDENTIALS FALSE para evitar conflictos
+        configuration.setAllowCredentials(false);
         
         // Headers expuestos
         configuration.setExposedHeaders(Arrays.asList(
-            "Authorization", "Cache-Control", "Content-Type"
+            "Authorization", "Cache-Control", "Content-Type", "Access-Control-Allow-Origin"
         ));
         
         // Max age para preflight requests

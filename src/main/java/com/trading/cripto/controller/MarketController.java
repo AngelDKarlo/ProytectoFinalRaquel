@@ -1,4 +1,4 @@
-// MarketController.java - CORREGIDO con CORS
+// MarketController.java - CORS COMPLETAMENTE CORREGIDO
 package com.trading.cripto.controller;
 
 import com.trading.cripto.model.Cryptocurrency;
@@ -17,10 +17,10 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/market")
 @CrossOrigin(
-    origins = {"http://localhost:3000", "http://localhost:8080", "http://127.0.0.1:3000", "null"},
+    origins = "*", 
     allowedHeaders = "*",
     methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS},
-    allowCredentials = "true"
+    allowCredentials = "false"  // CAMBIO IMPORTANTE: false para evitar conflictos
 )
 public class MarketController {
 
@@ -35,16 +35,23 @@ public class MarketController {
      * GET /api/market/prices
      */
     @GetMapping("/prices")
+    @CrossOrigin(origins = "*") // CORS adicional específico para este endpoint
     public ResponseEntity<List<Cryptocurrency>> obtenerPrecios() {
         try {
             List<Cryptocurrency> cryptos = cryptoRepo.findAll();
+            
             return ResponseEntity.ok()
                     .header("Access-Control-Allow-Origin", "*")
                     .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-                    .header("Access-Control-Allow-Headers", "*")
+                    .header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+                    .header("Access-Control-Allow-Credentials", "false")
                     .body(cryptos);
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
+            System.err.println("Error en /market/prices: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError()
+                    .header("Access-Control-Allow-Origin", "*")
+                    .build();
         }
     }
 
@@ -53,18 +60,26 @@ public class MarketController {
      * GET /api/market/price/{symbol}
      */
     @GetMapping("/price/{symbol}")
+    @CrossOrigin(origins = "*")
     public ResponseEntity<Cryptocurrency> obtenerPrecio(@PathVariable String symbol) {
         try {
             Optional<Cryptocurrency> crypto = cryptoRepo.findBySimbolo(symbol.toUpperCase());
             if (crypto.isPresent()) {
                 return ResponseEntity.ok()
                         .header("Access-Control-Allow-Origin", "*")
+                        .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+                        .header("Access-Control-Allow-Headers", "Content-Type, Authorization")
                         .body(crypto.get());
             } else {
-                return ResponseEntity.notFound().build();
+                return ResponseEntity.notFound()
+                        .header("Access-Control-Allow-Origin", "*")
+                        .build();
             }
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
+            System.err.println("Error en /market/price/" + symbol + ": " + e.getMessage());
+            return ResponseEntity.internalServerError()
+                    .header("Access-Control-Allow-Origin", "*")
+                    .build();
         }
     }
 
@@ -73,6 +88,7 @@ public class MarketController {
      * GET /api/market/history/{symbol}?hours=24
      */
     @GetMapping("/history/{symbol}")
+    @CrossOrigin(origins = "*")
     public ResponseEntity<?> obtenerHistorico(
             @PathVariable String symbol,
             @RequestParam(defaultValue = "24") int hours) {
@@ -80,13 +96,16 @@ public class MarketController {
         try {
             if (hours > 168) { // Máximo 7 días
                 return ResponseEntity.badRequest()
+                        .header("Access-Control-Allow-Origin", "*")
                         .body(Map.of("error", "Máximo 168 horas (7 días) permitidas"));
             }
 
             List<PriceHistory> history = marketDataService.getHistoricalData(symbol.toUpperCase(), hours);
 
             if (history.isEmpty()) {
-                return ResponseEntity.notFound().build();
+                return ResponseEntity.notFound()
+                        .header("Access-Control-Allow-Origin", "*")
+                        .build();
             }
 
             Map<String, Object> response = new HashMap<>();
@@ -97,22 +116,28 @@ public class MarketController {
 
             return ResponseEntity.ok()
                     .header("Access-Control-Allow-Origin", "*")
+                    .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+                    .header("Access-Control-Allow-Headers", "Content-Type, Authorization")
                     .body(response);
         } catch (Exception e) {
+            System.err.println("Error en /market/history/" + symbol + ": " + e.getMessage());
             return ResponseEntity.internalServerError()
+                    .header("Access-Control-Allow-Origin", "*")
                     .body(Map.of("error", "Error interno: " + e.getMessage()));
         }
     }
 
     /**
-     * OPTIONS para preflight CORS
+     * OPTIONS para preflight CORS - MUY IMPORTANTE
      */
     @RequestMapping(method = RequestMethod.OPTIONS, value = "/**")
+    @CrossOrigin(origins = "*")
     public ResponseEntity<?> handlePreflight() {
         return ResponseEntity.ok()
                 .header("Access-Control-Allow-Origin", "*")
                 .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
                 .header("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Requested-With")
+                .header("Access-Control-Allow-Credentials", "false")
                 .header("Access-Control-Max-Age", "3600")
                 .build();
     }
@@ -122,6 +147,7 @@ public class MarketController {
      * GET /api/market/recent/{symbol}?limit=100
      */
     @GetMapping("/recent/{symbol}")
+    @CrossOrigin(origins = "*")
     public ResponseEntity<?> obtenerRecientes(
             @PathVariable String symbol,
             @RequestParam(defaultValue = "100") int limit) {
@@ -129,6 +155,7 @@ public class MarketController {
         try {
             if (limit > 1000) {
                 return ResponseEntity.badRequest()
+                        .header("Access-Control-Allow-Origin", "*")
                         .body(Map.of("error", "Máximo 1000 registros permitidos"));
             }
 
@@ -141,9 +168,13 @@ public class MarketController {
 
             return ResponseEntity.ok()
                     .header("Access-Control-Allow-Origin", "*")
+                    .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+                    .header("Access-Control-Allow-Headers", "Content-Type, Authorization")
                     .body(response);
         } catch (Exception e) {
+            System.err.println("Error en /market/recent/" + symbol + ": " + e.getMessage());
             return ResponseEntity.internalServerError()
+                    .header("Access-Control-Allow-Origin", "*")
                     .body(Map.of("error", "Error interno: " + e.getMessage()));
         }
     }
@@ -153,19 +184,26 @@ public class MarketController {
      * GET /api/market/stats/{symbol}
      */
     @GetMapping("/stats/{symbol}")
+    @CrossOrigin(origins = "*")
     public ResponseEntity<?> obtenerEstadisticas(@PathVariable String symbol) {
         try {
             Map<String, Object> stats = marketDataService.getMarketStats(symbol.toUpperCase());
 
             if (stats.isEmpty()) {
-                return ResponseEntity.notFound().build();
+                return ResponseEntity.notFound()
+                        .header("Access-Control-Allow-Origin", "*")
+                        .build();
             }
 
             return ResponseEntity.ok()
                     .header("Access-Control-Allow-Origin", "*")
+                    .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+                    .header("Access-Control-Allow-Headers", "Content-Type, Authorization")
                     .body(stats);
         } catch (Exception e) {
+            System.err.println("Error en /market/stats/" + symbol + ": " + e.getMessage());
             return ResponseEntity.internalServerError()
+                    .header("Access-Control-Allow-Origin", "*")
                     .body(Map.of("error", "Error interno: " + e.getMessage()));
         }
     }
@@ -175,6 +213,7 @@ public class MarketController {
      * GET /api/market/summary
      */
     @GetMapping("/summary")
+    @CrossOrigin(origins = "*")
     public ResponseEntity<?> obtenerResumenMercado() {
         try {
             List<Cryptocurrency> cryptos = cryptoRepo.findAll();
@@ -187,9 +226,13 @@ public class MarketController {
 
             return ResponseEntity.ok()
                     .header("Access-Control-Allow-Origin", "*")
+                    .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+                    .header("Access-Control-Allow-Headers", "Content-Type, Authorization")
                     .body(summary);
         } catch (Exception e) {
+            System.err.println("Error en /market/summary: " + e.getMessage());
             return ResponseEntity.internalServerError()
+                    .header("Access-Control-Allow-Origin", "*")
                     .body(Map.of("error", "Error interno: " + e.getMessage()));
         }
     }
