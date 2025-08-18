@@ -67,43 +67,33 @@ public class SecurityConfig {
 
         return http.build();
     }
+@Bean
+public CorsConfigurationSource corsConfigurationSource() {
+    CorsConfiguration configuration = new CorsConfiguration();
+    
+    // PERMITIR TODOS LOS ORÍGENES (incluyendo file://)
+    configuration.setAllowedOriginPatterns(Arrays.asList("*"));
+    configuration.addAllowedOrigin("*");
+    configuration.addAllowedOrigin("file://");
+    configuration.addAllowedOrigin("null"); // Para archivos locales
+    
+    // Métodos HTTP permitidos
+    configuration.setAllowedMethods(Arrays.asList(
+        "GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"
+    ));
+    
+    // Headers permitidos
+    configuration.setAllowedHeaders(Arrays.asList("*"));
+    
+    // CREDENTIALS FALSE para evitar conflictos
+    configuration.setAllowCredentials(false);
+    
+    // Max age para preflight requests
+	 configuration.setMaxAge(3600L);
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        
-        // PERMITIR TODOS LOS ORÍGENES
-        configuration.setAllowedOriginPatterns(Arrays.asList("*"));
-        configuration.addAllowedOrigin("*");
-        
-        // Métodos HTTP permitidos
-        configuration.setAllowedMethods(Arrays.asList(
-            "GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"
-        ));
-        
-        // Headers permitidos - MUY AMPLIO
-        configuration.setAllowedHeaders(Arrays.asList("*"));
-        
-        // Headers expuestos
-        configuration.setExposedHeaders(Arrays.asList(
-            "Authorization", 
-            "Cache-Control", 
-            "Content-Type", 
-            "Access-Control-Allow-Origin",
-            "Access-Control-Allow-Methods",
-            "Access-Control-Allow-Headers"
-        ));
-        
-        // CREDENTIALS FALSE para evitar conflictos
-        configuration.setAllowCredentials(false);
-        
-        // Max age para preflight requests
-        configuration.setMaxAge(3600L);
-
-        // Aplicar a TODAS las rutas
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        
-        return source;
-    }
+    	 UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+   	 source.registerCorsConfiguration("/**", configuration);
+    
+   	 return source;
+	}
 }
