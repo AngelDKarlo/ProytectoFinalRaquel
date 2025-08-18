@@ -11,3 +11,4 @@ public class AppServer {
         SpringApplication.run(AppServer.class, args);
     }
 }
+
