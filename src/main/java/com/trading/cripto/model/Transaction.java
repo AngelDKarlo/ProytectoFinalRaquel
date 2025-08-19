@@ -42,6 +42,7 @@ public class Transaction {
     // Constructores
     public Transaction() {}
 
+    // ✅ Constructor simplificado - no asignar IDs automáticamente
     public Transaction(Integer userId, Integer cryptoId, String tipoTransaccion,
                        BigDecimal cantidad, BigDecimal precioEjecucion) {
         this.userId = userId;
@@ -50,9 +51,8 @@ public class Transaction {
         this.cantidad = cantidad;
         this.precioEjecucion = precioEjecucion;
         this.fechaEjecucion = new Timestamp(System.currentTimeMillis());
-        // Para tu BD, necesitamos IDs de órdenes ficticios
-        this.ordenCompraId = 1; // Valor por defecto
-        this.ordenVentaId = 1;  // Valor por defecto
+        // ❌ NO asignar ordenCompraId y ordenVentaId aquí
+        // Se asignarán después de crear las órdenes reales
     }
 
     // Getters y Setters

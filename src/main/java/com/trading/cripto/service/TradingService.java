@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.sql.Timestamp;
 import java.util.Optional;
 
 @Service
@@ -32,6 +33,9 @@ public class TradingService {
 
     @Autowired
     private UserRepository userRepo;
+
+    @Autowired
+    private OrdenRepository ordenRepo;
 
     // Comisión por transacción (0.1%)
     private final BigDecimal COMISION_PORCENTAJE = new BigDecimal("0.001");
@@ -127,23 +131,42 @@ public class TradingService {
                 throw new InsufficientFundsExeption(errorMsg);
             }
 
-            // Actualizar saldo USD
+            // ✅ PASO 1: Crear orden de compra
+            Orden ordenCompra = new Orden(userId, crypto.getId(), "compra", cantidad, precioActual);
+            ordenCompra = ordenRepo.save(ordenCompra);
+            System.out.println("✅ [TradingService] Orden de compra creada con ID: " + ordenCompra.getId());
+
+            // ✅ PASO 2: Crear orden de venta ficticia (requerida por tu BD)
+            Orden ordenVenta = new Orden(userId, crypto.getId(), "venta", cantidad, precioActual);
+            ordenVenta = ordenRepo.save(ordenVenta);
+            System.out.println("✅ [TradingService] Orden de venta ficticia creada con ID: " + ordenVenta.getId());
+
+            // PASO 3: Actualizar saldo USD
             portafolio.setSaldoUsd(portafolio.getSaldoUsd().subtract(costoTotal));
             portafolio = portafolioRepo.save(portafolio);
             System.out.println("✅ [TradingService] Portafolio actualizado. Nuevo saldo: " + portafolio.getSaldoUsd());
 
-            // Actualizar o crear wallet de cripto
+            // PASO 4: Actualizar o crear wallet de cripto
             Wallet wallet = obtenerOCrearWallet(userId, crypto.getId());
             BigDecimal saldoAnterior = wallet.getSaldo();
             wallet.setSaldo(wallet.getSaldo().add(cantidad));
             wallet = walletRepo.save(wallet);
             System.out.println("✅ [TradingService] Wallet actualizada. Saldo anterior: " + saldoAnterior + ", Nuevo saldo: " + wallet.getSaldo());
 
-            // Registrar transacción
-            Transaction transaction = new Transaction(
-                    userId, crypto.getId(), "COMPRA", cantidad, precioActual
-            );
+            // ✅ PASO 5: Registrar transacción con IDs de órdenes reales
+            Transaction transaction = new Transaction();
+            transaction.setUserId(userId);
+            transaction.setCryptoId(crypto.getId());
+            transaction.setTipoTransaccion("COMPRA");
+            transaction.setCantidad(cantidad);
+            transaction.setPrecioEjecucion(precioActual);
             transaction.setComision(comision);
+            transaction.setFechaEjecucion(new Timestamp(System.currentTimeMillis()));
+            
+            // ✅ CRÍTICO: Usar los IDs de las órdenes reales
+            transaction.setOrdenCompraId(ordenCompra.getId());
+            transaction.setOrdenVentaId(ordenVenta.getId());
+            
             transaction = transactionRepo.save(transaction);
             System.out.println("✅ [TradingService] Transacción registrada con ID: " + transaction.getId());
 
@@ -171,49 +194,84 @@ public class TradingService {
     private TradeResponse ejecutarVenta(Integer userId, Cryptocurrency crypto,
                                         BigDecimal cantidad, BigDecimal precioActual) {
 
-        // Verificar saldo de cripto
-        Optional<Wallet> walletOpt = walletRepo.findByUserIdAndCryptoId(userId, crypto.getId());
-        if (walletOpt.isEmpty() || walletOpt.get().getSaldo().compareTo(cantidad) < 0) {
-            BigDecimal saldoActual = walletOpt.map(Wallet::getSaldo).orElse(BigDecimal.ZERO);
-            throw new InsufficientFundsExeption(
-                    String.format("Cantidad insuficiente de %s. Necesario: %.8f, Disponible: %.8f",
-                            crypto.getSimbolo(), cantidad, saldoActual)
-            );
+        System.out.println("💸 [TradingService] Ejecutando VENTA:");
+        System.out.println("   - Usuario: " + userId);
+        System.out.println("   - Cripto: " + crypto.getSimbolo() + " (" + crypto.getId() + ")");
+        System.out.println("   - Cantidad: " + cantidad);
+        System.out.println("   - Precio: " + precioActual);
+
+        try {
+            // Verificar saldo de cripto
+            Optional<Wallet> walletOpt = walletRepo.findByUserIdAndCryptoId(userId, crypto.getId());
+            if (walletOpt.isEmpty() || walletOpt.get().getSaldo().compareTo(cantidad) < 0) {
+                BigDecimal saldoActual = walletOpt.map(Wallet::getSaldo).orElse(BigDecimal.ZERO);
+                throw new InsufficientFundsExeption(
+                        String.format("Cantidad insuficiente de %s. Necesario: %.8f, Disponible: %.8f",
+                                crypto.getSimbolo(), cantidad, saldoActual)
+                );
+            }
+
+            Wallet wallet = walletOpt.get();
+
+            // Calcular ganancia
+            BigDecimal ingresoSinComision = cantidad.multiply(precioActual);
+            BigDecimal comision = ingresoSinComision.multiply(COMISION_PORCENTAJE);
+            BigDecimal ingresoNeto = ingresoSinComision.subtract(comision);
+
+            // ✅ PASO 1: Crear orden de venta
+            Orden ordenVenta = new Orden(userId, crypto.getId(), "venta", cantidad, precioActual);
+            ordenVenta = ordenRepo.save(ordenVenta);
+            System.out.println("✅ [TradingService] Orden de venta creada con ID: " + ordenVenta.getId());
+
+            // ✅ PASO 2: Crear orden de compra ficticia (requerida por tu BD)
+            Orden ordenCompra = new Orden(userId, crypto.getId(), "compra", cantidad, precioActual);
+            ordenCompra = ordenRepo.save(ordenCompra);
+            System.out.println("✅ [TradingService] Orden de compra ficticia creada con ID: " + ordenCompra.getId());
+
+            // PASO 3: Actualizar saldo cripto
+            wallet.setSaldo(wallet.getSaldo().subtract(cantidad));
+            wallet = walletRepo.save(wallet);
+            System.out.println("✅ [TradingService] Wallet actualizada. Nuevo saldo: " + wallet.getSaldo());
+
+            // PASO 4: Actualizar saldo USD
+            Portafolio portafolio = obtenerOCrearPortafolio(userId);
+            portafolio.setSaldoUsd(portafolio.getSaldoUsd().add(ingresoNeto));
+            portafolio = portafolioRepo.save(portafolio);
+            System.out.println("✅ [TradingService] Portafolio actualizado. Nuevo saldo: " + portafolio.getSaldoUsd());
+
+            // ✅ PASO 5: Registrar transacción con IDs de órdenes reales
+            Transaction transaction = new Transaction();
+            transaction.setUserId(userId);
+            transaction.setCryptoId(crypto.getId());
+            transaction.setTipoTransaccion("VENTA");
+            transaction.setCantidad(cantidad);
+            transaction.setPrecioEjecucion(precioActual);
+            transaction.setComision(comision);
+            transaction.setFechaEjecucion(new Timestamp(System.currentTimeMillis()));
+            
+            // ✅ CRÍTICO: Usar los IDs de las órdenes reales
+            transaction.setOrdenCompraId(ordenCompra.getId());
+            transaction.setOrdenVentaId(ordenVenta.getId());
+            
+            transaction = transactionRepo.save(transaction);
+            System.out.println("✅ [TradingService] Transacción registrada con ID: " + transaction.getId());
+
+            // Preparar respuesta
+            TradeResponse response = new TradeResponse(true, "Venta ejecutada exitosamente");
+            response.setCantidadEjecutada(cantidad);
+            response.setPrecioEjecutado(precioActual);
+            response.setComision(comision);
+            response.setNuevoSaldoUsd(portafolio.getSaldoUsd());
+            response.setNuevoSaldoCripto(wallet.getSaldo());
+
+            System.out.println("✅ [TradingService] VENTA EXITOSA completada");
+            return response;
+
+        } catch (Exception e) {
+            System.err.println("❌ [TradingService] Error en ejecutarVenta: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
         }
-
-        Wallet wallet = walletOpt.get();
-
-        // Calcular ganancia
-        BigDecimal ingresoSinComision = cantidad.multiply(precioActual);
-        BigDecimal comision = ingresoSinComision.multiply(COMISION_PORCENTAJE);
-        BigDecimal ingresoNeto = ingresoSinComision.subtract(comision);
-
-        // Actualizar saldo cripto
-        wallet.setSaldo(wallet.getSaldo().subtract(cantidad));
-        walletRepo.save(wallet);
-
-        // Actualizar saldo USD
-        Portafolio portafolio = obtenerOCrearPortafolio(userId);
-        portafolio.setSaldoUsd(portafolio.getSaldoUsd().add(ingresoNeto));
-        portafolioRepo.save(portafolio);
-
-        // Registrar transacción
-        Transaction transaction = new Transaction(
-                userId, crypto.getId(), TransactionType.VENTA.getValue(),
-                cantidad, precioActual
-        );
-        transaction.setComision(comision);
-        transactionRepo.save(transaction);
-
-        // Preparar respuesta
-        TradeResponse response = new TradeResponse(true, "Venta ejecutada exitosamente");
-        response.setCantidadEjecutada(cantidad);
-        response.setPrecioEjecutado(precioActual);
-        response.setComision(comision);
-        response.setNuevoSaldoUsd(portafolio.getSaldoUsd());
-        response.setNuevoSaldoCripto(wallet.getSaldo());
-
-        return response;
     }
 
     /**
