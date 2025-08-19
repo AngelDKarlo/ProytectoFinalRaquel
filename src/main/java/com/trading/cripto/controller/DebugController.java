@@ -8,7 +8,10 @@ import com.trading.cripto.model.PriceHistory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -159,6 +162,41 @@ public class DebugController {
             status.put("message", "Error de conexión a BD");
             
             return ResponseEntity.status(500).body(status);
+        }
+    }
+
+    /**
+     * Test de autenticación JWT
+     * GET /api/debug/test-auth
+     */
+    @GetMapping("/test-auth")
+    public ResponseEntity<?> testAuth(HttpServletRequest request) {
+        Map<String, Object> response = new HashMap<>();
+        
+        // Headers
+        String authHeader = request.getHeader("Authorization");
+        response.put("authHeader", authHeader != null ? "Bearer [TOKEN]" : "NULL");
+        
+        // Atributos del request
+        Integer userId = (Integer) request.getAttribute("userId");
+        String userEmail = (String) request.getAttribute("userEmail");
+        
+        response.put("userId", userId);
+        response.put("userEmail", userEmail);
+        response.put("authenticated", userId != null);
+        
+        // Security Context
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        response.put("securityContext", auth != null ? auth.getName() : "NULL");
+        
+        response.put("timestamp", System.currentTimeMillis());
+        
+        if (userId != null) {
+            response.put("status", "AUTHENTICATED");
+            return ResponseEntity.ok(response);
+        } else {
+            response.put("status", "NOT_AUTHENTICATED");
+            return ResponseEntity.status(401).body(response);
         }
     }
 }

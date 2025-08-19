@@ -68,12 +68,31 @@ public class JwtUtil {
     }
 
     public Boolean validateToken(String token, String username) {
-        final String extractedUsername = extractUsername(token);
-        return (extractedUsername.equals(username) && !isTokenExpired(token));
+        try {
+            final String extractedUsername = extractUsername(token);
+            boolean isValid = (extractedUsername.equals(username) && !isTokenExpired(token));
+            
+            System.out.println("🔍 [JwtUtil] Validando token para: " + username);
+            System.out.println("🔍 [JwtUtil] Token extraído username: " + extractedUsername);
+            System.out.println("🔍 [JwtUtil] Token expirado: " + isTokenExpired(token));
+            System.out.println("🔍 [JwtUtil] Token válido: " + isValid);
+            
+            return isValid;
+        } catch (Exception e) {
+            System.err.println("❌ [JwtUtil] Error validando token: " + e.getMessage());
+            return false;
+        }
     }
 
     public Integer extractUserId(String token) {
-        Claims claims = extractAllClaims(token);
-        return claims.get("userId", Integer.class);
+        try {
+            Claims claims = extractAllClaims(token);
+            Integer userId = claims.get("userId", Integer.class);
+            System.out.println("🔍 [JwtUtil] UserID extraído del token: " + userId);
+            return userId;
+        } catch (Exception e) {
+            System.err.println("❌ [JwtUtil] Error extrayendo userId: " + e.getMessage());
+            return null;
+        }
     }
 }

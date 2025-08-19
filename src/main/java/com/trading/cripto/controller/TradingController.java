@@ -31,20 +31,44 @@ public class TradingController {
             HttpServletRequest request,
             @Valid @RequestBody TradeRequest tradeRequest) {
 
+        System.out.println("🔍 [TradingController] Solicitud de trading recibida");
+        System.out.println("🔍 [TradingController] Request data: " + tradeRequest.toString());
+
         // Obtener userId del token JWT
         Integer userId = (Integer) request.getAttribute("userId");
+        String userEmail = (String) request.getAttribute("userEmail");
+        
+        System.out.println("🔍 [TradingController] UserID extraído: " + userId);
+        System.out.println("🔍 [TradingController] UserEmail extraído: " + userEmail);
 
         if (userId == null) {
+            System.err.println("❌ [TradingController] Usuario no autenticado - userId es null");
+            
+            // Debug adicional
+            String authHeader = request.getHeader("Authorization");
+            System.err.println("❌ [TradingController] Authorization header: " + 
+                (authHeader != null ? "Bearer [TOKEN]" : "NULL"));
+            
             return ResponseEntity.status(401).body(
-                    new TradeResponse(false, "Usuario no autenticado"));
+                    new TradeResponse(false, "Usuario no autenticado. Token JWT requerido."));
         }
 
-        TradeResponse response = tradingService.ejecutarTrade(userId, tradeRequest);
+        try {
+            System.out.println("🔄 [TradingController] Ejecutando trade para userId: " + userId);
+            TradeResponse response = tradingService.ejecutarTrade(userId, tradeRequest);
 
-        if (response.isExitoso()) {
-            return ResponseEntity.ok(response);
-        } else {
-            return ResponseEntity.badRequest().body(response);
+            if (response.isExitoso()) {
+                System.out.println("✅ [TradingController] Trade exitoso para userId: " + userId);
+                return ResponseEntity.ok(response);
+            } else {
+                System.err.println("❌ [TradingController] Trade fallido: " + response.getMensaje());
+                return ResponseEntity.badRequest().body(response);
+            }
+        } catch (Exception e) {
+            System.err.println("❌ [TradingController] Error ejecutando trade: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(
+                    new TradeResponse(false, "Error interno del servidor: " + e.getMessage()));
         }
     }
 
