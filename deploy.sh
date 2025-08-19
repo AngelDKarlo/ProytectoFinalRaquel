@@ -3,7 +3,7 @@
 
 set -e  # Salir si hay algún error
 
-echo "🚀 INICIANDO DESPLIEGUE DE CRYPTO TRADING API"
+echo "INICIANDO DESPLIEGUE DE CRYPTO TRADING API"
 echo "=============================================="
 
 # Colores para output
@@ -47,7 +47,7 @@ check_dependencies() {
         warning "Git no está instalado. Algunas funciones pueden no funcionar."
     fi
     
-    log "✅ Todas las dependencias están instaladas"
+    log "Todas las dependencias están instaladas"
 }
 
 # Verificar archivo .env
@@ -76,11 +76,11 @@ SPRING_PROFILES_ACTIVE=production
 TRADING_COMMISSION=0.001
 TRADING_INITIAL_BALANCE=10000
 EOF
-        warning "⚠️  IMPORTANTE: Edita el archivo .env con tus configuraciones de producción"
-        warning "⚠️  Especialmente cambia las contraseñas y el JWT_SECRET"
+        warning "IMPORTANTE: Edita el archivo .env con tus configuraciones de producción"
+        warning "Especialmente cambia las contraseñas y el JWT_SECRET"
     fi
     
-    log "✅ Archivo .env verificado"
+    log "Archivo .env verificado"
 }
 
 # Limpiar contenedores anteriores
@@ -94,7 +94,7 @@ cleanup_containers() {
     docker rmi crypto-trading-api_api 2>/dev/null || true
     docker rmi crypto-trading-api-api 2>/dev/null || true
     
-    log "✅ Limpieza completada"
+    log "Limpieza completada"
 }
 
 # Construir y desplegar
@@ -102,14 +102,14 @@ deploy() {
     log "Construyendo y desplegando aplicación..."
     
     # Construir sin caché para asegurar última versión
-    log "📦 Construyendo imagen Docker..."
+    log "Construyendo imagen Docker..."
     docker-compose build --no-cache api
     
     # Levantar servicios
-    log "🚀 Levantando servicios..."
+    log "Levantando servicios..."
     docker-compose up -d
     
-    log "✅ Servicios desplegados"
+    log "Servicios desplegados"
 }
 
 # Verificar que los servicios estén funcionando
@@ -117,14 +117,14 @@ verify_deployment() {
     log "Verificando despliegue..."
     
     # Esperar a que los servicios estén listos
-    log "⏳ Esperando que los servicios inicien..."
+    log "Esperando que los servicios inicien..."
     sleep 30
     
     # Verificar MySQL
     if docker-compose exec mysql mysqladmin ping -h localhost --silent; then
-        log "✅ MySQL está funcionando"
+        log "MySQL está funcionando"
     else
-        error "❌ MySQL no está respondiendo"
+        error "MySQL no está respondiendo"
     fi
     
     # Verificar API
@@ -132,15 +132,15 @@ verify_deployment() {
     attempt=1
     
     while [ $attempt -le $max_attempts ]; do
-        log "🔍 Verificando API (intento $attempt/$max_attempts)..."
+        log "Verificando API (intento $attempt/$max_attempts)..."
         
         if curl -f -s http://localhost:8080/actuator/health > /dev/null; then
-            log "✅ API está funcionando correctamente"
+            log "API está funcionando correctamente"
             break
         elif [ $attempt -eq $max_attempts ]; then
-            error "❌ API no está respondiendo después de $max_attempts intentos"
+            error "API no está respondiendo después de $max_attempts intentos"
         else
-            log "⏳ API aún no está lista, esperando 10 segundos..."
+            log "API aún no está lista, esperando 10 segundos..."
             sleep 10
         fi
         
@@ -150,31 +150,31 @@ verify_deployment() {
 
 # Mostrar información del despliegue
 show_deployment_info() {
-    log "📋 INFORMACIÓN DEL DESPLIEGUE"
+    log "INFORMACIÓN DEL DESPLIEGUE"
     echo "=============================="
     
-    info "🌐 API URL: http://localhost:8080"
-    info "📊 Health Check: http://localhost:8080/actuator/health"
-    info "🔧 Debug Endpoints: http://localhost:8080/api/debug/"
-    info "🔐 Auth Endpoints: http://localhost:8080/api/auth/"
-    info "📈 Market Endpoints: http://localhost:8080/api/market/"
+    info "API URL: http://localhost:8080"
+    info "Health Check: http://localhost:8080/actuator/health"
+    info "Debug Endpoints: http://localhost:8080/api/debug/"
+    info "Auth Endpoints: http://localhost:8080/api/auth/"
+    info "Market Endpoints: http://localhost:8080/api/market/"
     
     echo ""
-    info "📝 Logs de la aplicación:"
+    info "Logs de la aplicación:"
     echo "   docker-compose logs -f api"
     
     echo ""
-    info "🔍 Estado de los servicios:"
+    info "Estado de los servicios:"
     docker-compose ps
     
     echo ""
-    info "🧪 Test rápido de la API:"
+    info "Test rápido de la API:"
     curl -s http://localhost:8080/api/market/test | head -3
 }
 
 # Función principal
 main() {
-    log "🎯 Iniciando proceso de despliegue..."
+    log "Iniciando proceso de despliegue..."
     
     check_dependencies
     check_env_file
@@ -184,9 +184,9 @@ main() {
     show_deployment_info
     
     echo ""
-    log "🎉 ¡DESPLIEGUE COMPLETADO EXITOSAMENTE!"
+    log "DESPLIEGUE COMPLETADO EXITOSAMENTE!"
     echo "=============================================="
-    warning "📝 Recuerda:"
+    warning "Recuerda:"
     warning "   1. Configurar tu dominio si vas a usar HTTPS"
     warning "   2. Configurar certificados SSL para producción"
     warning "   3. Revisar y ajustar las configuraciones en .env"
@@ -194,7 +194,7 @@ main() {
 }
 
 # Manejar interrupciones
-trap 'error "❌ Despliegue interrumpido"' INT TERM
+trap 'error "Despliegue interrumpido"' INT TERM
 
 # Ejecutar si es llamado directamente
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

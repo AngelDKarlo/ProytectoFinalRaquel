@@ -45,8 +45,8 @@ public class TradingService {
      */
     @Transactional
     public TradeResponse ejecutarTrade(Integer userId, TradeRequest request) {
-        System.out.println("🔄 [TradingService] Iniciando trade para userId: " + userId);
-        System.out.println("🔄 [TradingService] Request: " + request);
+        System.out.println("[TradingService] Iniciando trade para userId: " + userId);
+        System.out.println("[TradingService] Request: " + request);
 
         try {
             // Validar datos básicos
@@ -54,14 +54,14 @@ public class TradingService {
 
             // Verificar que el usuario existe
             if (!userRepo.existsById(userId)) {
-                System.err.println("❌ [TradingService] Usuario no encontrado: " + userId);
+                System.err.println("[TradingService] Usuario no encontrado: " + userId);
                 return new TradeResponse(false, "Usuario no encontrado");
             }
 
             // Obtener la criptomoneda
             Optional<Cryptocurrency> cryptoOpt = cryptoRepo.findBySimbolo(request.getSymboloCripto());
             if (cryptoOpt.isEmpty()) {
-                System.err.println("❌ [TradingService] Criptomoneda no encontrada: " + request.getSymboloCripto());
+                System.err.println("[TradingService] Criptomoneda no encontrada: " + request.getSymboloCripto());
                 return new TradeResponse(false, "Criptomoneda no encontrada: " + request.getSymboloCripto());
             }
 
@@ -69,11 +69,11 @@ public class TradingService {
             BigDecimal precioActual = crypto.getPrecio();
 
             if (precioActual == null || precioActual.compareTo(BigDecimal.ZERO) <= 0) {
-                System.err.println("❌ [TradingService] Precio no disponible para: " + request.getSymboloCripto());
+                System.err.println("[TradingService] Precio no disponible para: " + request.getSymboloCripto());
                 return new TradeResponse(false, "Precio no disponible para " + request.getSymboloCripto());
             }
 
-            System.out.println("✅ [TradingService] Datos validados. Precio actual: " + precioActual);
+            System.out.println("[TradingService] Datos validados. Precio actual: " + precioActual);
 
             // Ejecutar según tipo de operación
             if ("COMPRA".equals(request.getTipoOperacion())) {
@@ -81,18 +81,18 @@ public class TradingService {
             } else if ("VENTA".equals(request.getTipoOperacion())) {
                 return ejecutarVenta(userId, crypto, request.getCantidad(), precioActual);
             } else {
-                System.err.println("❌ [TradingService] Tipo de operación inválido: " + request.getTipoOperacion());
+                System.err.println("[TradingService] Tipo de operación inválido: " + request.getTipoOperacion());
                 return new TradeResponse(false, "Tipo de operación no válido: " + request.getTipoOperacion());
             }
 
         } catch (InsufficientFundsExeption e) {
-            System.err.println("❌ [TradingService] Fondos insuficientes: " + e.getMessage());
+            System.err.println("[TradingService] Fondos insuficientes: " + e.getMessage());
             return new TradeResponse(false, "Fondos insuficientes: " + e.getMessage());
         } catch (TradingExeption e) {
-            System.err.println("❌ [TradingService] Error de trading: " + e.getMessage());
+            System.err.println("[TradingService] Error de trading: " + e.getMessage());
             return new TradeResponse(false, "Error de trading: " + e.getMessage());
         } catch (Exception e) {
-            System.err.println("❌ [TradingService] Error inesperado: " + e.getMessage());
+            System.err.println("[TradingService] Error inesperado: " + e.getMessage());
             e.printStackTrace();
             return new TradeResponse(false, "Error interno: " + e.getMessage());
         }
@@ -104,7 +104,7 @@ public class TradingService {
     private TradeResponse ejecutarCompra(Integer userId, Cryptocurrency crypto,
                                          BigDecimal cantidad, BigDecimal precioActual) {
 
-        System.out.println("💰 [TradingService] Ejecutando COMPRA:");
+        System.out.println("[TradingService] Ejecutando COMPRA:");
         System.out.println("   - Usuario: " + userId);
         System.out.println("   - Cripto: " + crypto.getSimbolo() + " (" + crypto.getId() + ")");
         System.out.println("   - Cantidad: " + cantidad);
@@ -127,33 +127,33 @@ public class TradingService {
             if (portafolio.getSaldoUsd().compareTo(costoTotal) < 0) {
                 String errorMsg = String.format("Saldo insuficiente. Necesario: $%.2f, Disponible: $%.2f",
                         costoTotal.doubleValue(), portafolio.getSaldoUsd().doubleValue());
-                System.err.println("❌ [TradingService] " + errorMsg);
+                System.err.println("[TradingService] " + errorMsg);
                 throw new InsufficientFundsExeption(errorMsg);
             }
 
-            // ✅ PASO 1: Crear orden de compra
+            // Paso 1: Crear orden de compra
             Orden ordenCompra = new Orden(userId, crypto.getId(), "compra", cantidad, precioActual);
             ordenCompra = ordenRepo.save(ordenCompra);
-            System.out.println("✅ [TradingService] Orden de compra creada con ID: " + ordenCompra.getId());
+            System.out.println("[TradingService] Orden de compra creada con ID: " + ordenCompra.getId());
 
-            // ✅ PASO 2: Crear orden de venta ficticia (requerida por tu BD)
+            // Paso 2: Crear orden de venta ficticia (requerida por la BD)
             Orden ordenVenta = new Orden(userId, crypto.getId(), "venta", cantidad, precioActual);
             ordenVenta = ordenRepo.save(ordenVenta);
-            System.out.println("✅ [TradingService] Orden de venta ficticia creada con ID: " + ordenVenta.getId());
+            System.out.println("[TradingService] Orden de venta ficticia creada con ID: " + ordenVenta.getId());
 
-            // PASO 3: Actualizar saldo USD
+            // Paso 3: Actualizar saldo USD
             portafolio.setSaldoUsd(portafolio.getSaldoUsd().subtract(costoTotal));
             portafolio = portafolioRepo.save(portafolio);
-            System.out.println("✅ [TradingService] Portafolio actualizado. Nuevo saldo: " + portafolio.getSaldoUsd());
+            System.out.println("[TradingService] Portafolio actualizado. Nuevo saldo: " + portafolio.getSaldoUsd());
 
-            // PASO 4: Actualizar o crear wallet de cripto
+            // Paso 4: Actualizar o crear wallet de cripto
             Wallet wallet = obtenerOCrearWallet(userId, crypto.getId());
             BigDecimal saldoAnterior = wallet.getSaldo();
             wallet.setSaldo(wallet.getSaldo().add(cantidad));
             wallet = walletRepo.save(wallet);
-            System.out.println("✅ [TradingService] Wallet actualizada. Saldo anterior: " + saldoAnterior + ", Nuevo saldo: " + wallet.getSaldo());
+            System.out.println("[TradingService] Wallet actualizada. Saldo anterior: " + saldoAnterior + ", Nuevo saldo: " + wallet.getSaldo());
 
-            // ✅ PASO 5: Registrar transacción con IDs de órdenes reales
+            // Paso 5: Registrar transacción con IDs de órdenes reales
             Transaction transaction = new Transaction();
             transaction.setUserId(userId);
             transaction.setCryptoId(crypto.getId());
@@ -162,13 +162,13 @@ public class TradingService {
             transaction.setPrecioEjecucion(precioActual);
             transaction.setComision(comision);
             transaction.setFechaEjecucion(new Timestamp(System.currentTimeMillis()));
-            
-            // ✅ CRÍTICO: Usar los IDs de las órdenes reales
+
+            // Usar los IDs de las órdenes reales
             transaction.setOrdenCompraId(ordenCompra.getId());
             transaction.setOrdenVentaId(ordenVenta.getId());
-            
+
             transaction = transactionRepo.save(transaction);
-            System.out.println("✅ [TradingService] Transacción registrada con ID: " + transaction.getId());
+            System.out.println("[TradingService] Transacción registrada con ID: " + transaction.getId());
 
             // Preparar respuesta
             TradeResponse response = new TradeResponse(true, "Compra ejecutada exitosamente");
@@ -178,11 +178,11 @@ public class TradingService {
             response.setNuevoSaldoUsd(portafolio.getSaldoUsd());
             response.setNuevoSaldoCripto(wallet.getSaldo());
 
-            System.out.println("✅ [TradingService] COMPRA EXITOSA completada");
+            System.out.println("[TradingService] COMPRA EXITOSA completada");
             return response;
 
         } catch (Exception e) {
-            System.err.println("❌ [TradingService] Error en ejecutarCompra: " + e.getMessage());
+            System.err.println("[TradingService] Error en ejecutarCompra: " + e.getMessage());
             e.printStackTrace();
             throw e; // Re-lanzar para que @Transactional maneje el rollback
         }
@@ -248,11 +248,11 @@ public class TradingService {
             transaction.setPrecioEjecucion(precioActual);
             transaction.setComision(comision);
             transaction.setFechaEjecucion(new Timestamp(System.currentTimeMillis()));
-            
+
             // ✅ CRÍTICO: Usar los IDs de las órdenes reales
             transaction.setOrdenCompraId(ordenCompra.getId());
             transaction.setOrdenVentaId(ordenVenta.getId());
-            
+
             transaction = transactionRepo.save(transaction);
             System.out.println("✅ [TradingService] Transacción registrada con ID: " + transaction.getId());
 
@@ -279,11 +279,11 @@ public class TradingService {
      */
     private void validarRequest(TradeRequest request) {
         System.out.println("🔍 [TradingService] Validando request...");
-        
+
         if (request == null) {
             throw new TradingExeption("Request no puede ser null");
         }
-        
+
         if (request.getSymboloCripto() == null || request.getSymboloCripto().trim().isEmpty()) {
             throw new TradingExeption("Símbolo de criptomoneda requerido");
         }
@@ -310,10 +310,10 @@ public class TradingService {
      */
     private Portafolio obtenerOCrearPortafolio(Integer userId) {
         System.out.println("🔍 [TradingService] Obteniendo portafolio para userId: " + userId);
-        
+
         try {
             Optional<Portafolio> portafolioOpt = portafolioRepo.findByUserId(userId);
-            
+
             if (portafolioOpt.isPresent()) {
                 System.out.println("✅ [TradingService] Portafolio encontrado");
                 return portafolioOpt.get();
@@ -335,10 +335,10 @@ public class TradingService {
      */
     private Wallet obtenerOCrearWallet(Integer userId, Integer cryptoId) {
         System.out.println("🔍 [TradingService] Obteniendo wallet para userId: " + userId + ", cryptoId: " + cryptoId);
-        
+
         try {
             Optional<Wallet> walletOpt = walletRepo.findByUserIdAndCryptoId(userId, cryptoId);
-            
+
             if (walletOpt.isPresent()) {
                 System.out.println("✅ [TradingService] Wallet encontrada");
                 return walletOpt.get();
