@@ -33,12 +33,11 @@ public class Transaction {
     @Column(name = "comision", precision = 10, scale = 8)
     private BigDecimal comision = BigDecimal.ZERO;
 
-    // Para simplificar, agregamos estos campos
     @Column(name = "id_usuario", nullable = false)
     private Integer userId;
 
     @Column(name = "tipo_transaccion", nullable = false)
-    private String tipoTransaccion; // "COMPRA" o "VENTA"
+    private String tipoTransaccion;
 
     // Constructores
     public Transaction() {}
@@ -51,6 +50,9 @@ public class Transaction {
         this.cantidad = cantidad;
         this.precioEjecucion = precioEjecucion;
         this.fechaEjecucion = new Timestamp(System.currentTimeMillis());
+        // Para tu BD, necesitamos IDs de órdenes ficticios
+        this.ordenCompraId = 1; // Valor por defecto
+        this.ordenVentaId = 1;  // Valor por defecto
     }
 
     // Getters y Setters

@@ -5,11 +5,11 @@ import java.math.BigDecimal;
 import java.sql.Timestamp;
 
 @Entity
-@Table(name = "wallets_cripto")
+@Table(name = "wallets")
 public class Wallet {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id_wallet")
+    @Column(name = "id_billetera")
     private Integer id;
 
     @Column(name = "id_usuario", nullable = false)
