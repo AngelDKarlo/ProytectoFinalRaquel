@@ -10,6 +10,7 @@ public class TradeResponse {
     private BigDecimal comision;
     private BigDecimal nuevoSaldoUsd;
     private BigDecimal nuevoSaldoCripto;
+    private String timestamp;
 
     // Constructores
     public TradeResponse() {}
@@ -17,6 +18,7 @@ public class TradeResponse {
     public TradeResponse(boolean exitoso, String mensaje) {
         this.exitoso = exitoso;
         this.mensaje = mensaje;
+        this.timestamp = String.valueOf(System.currentTimeMillis());
     }
 
     // Getters y Setters
@@ -40,4 +42,7 @@ public class TradeResponse {
 
     public BigDecimal getNuevoSaldoCripto() { return nuevoSaldoCripto; }
     public void setNuevoSaldoCripto(BigDecimal nuevoSaldoCripto) { this.nuevoSaldoCripto = nuevoSaldoCripto; }
+
+    public String getTimestamp() { return timestamp; }
+    public void setTimestamp(String timestamp) { this.timestamp = timestamp; }
 }
